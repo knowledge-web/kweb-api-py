@@ -1,32 +1,36 @@
-# Importing required libraries
+
 import zipfile
-import shutil
 import os
-import tempfile
+import shutil
 
-# Define the function to perform the extraction and zipping tasks
-def extract_and_zip(src_zip_path, dest_zip_name):
-    # Create a temporary directory to extract files
-    temp_dir = tempfile.mkdtemp()
+def unzip_file(zip_path, extract_to='/tmp/'):
+    print(f"Unzipping {zip_path} to {extract_to}")
+    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+        zip_ref.extractall(extract_to)
 
-    # Extract the zip file to the temporary directory
-    with zipfile.ZipFile(src_zip_path, 'r') as zip_ref:
-        zip_ref.extractall(temp_dir)
+def move_file(src, dest):
+    print(f"Moving {src} to {dest}")
+    shutil.move(src, dest)
 
-    # Move the Brain.db file to the current directory
-    brain_db_path = os.path.join(temp_dir, 'Brain.db')
-    shutil.move(brain_db_path, './Brain.db')
-
-    # Create a new zip file with remaining content (excluding Brain.db)
-    with zipfile.ZipFile(dest_zip_name, 'w', zipfile.ZIP_DEFLATED) as new_zip:
-        for root, _, files in os.walk(temp_dir):
+def rezip_folder(folder_path, zip_name):
+    print(f"Rezipping contents of {folder_path} to {zip_name} (excluding Brain.db)")
+    with zipfile.ZipFile(zip_name, 'w', zipfile.ZIP_DEFLATED) as zipf:
+        for root, _, files in os.walk(folder_path):
             for file in files:
-                file_path = os.path.join(root, file)
-                arcname = os.path.relpath(file_path, temp_dir)
-                new_zip.write(file_path, arcname)
+                if file != 'Brain.db':
+                    zipf.write(os.path.join(root, file), os.path.relpath(os.path.join(root, file), folder_path))
 
-    # Cleanup: Remove the temporary directory
+def main(input_zip='Brain-pruned.zip', output_zip='content.zip'):
+    temp_dir = '/tmp/brain_pruned_extraction'
+    os.makedirs(temp_dir, exist_ok=True)
+    unzip_file(input_zip, temp_dir)
+    move_file(f'{temp_dir}/Brain.db', './Brain.db')
+    rezip_folder(temp_dir, output_zip)
+    print(f"Cleaning up {temp_dir}")
     shutil.rmtree(temp_dir)
 
-# Example usage (you can replace these paths with your own)
-extract_and_zip('Brain-pruned.zip', 'content.zip')
+if __name__ == '__main__':
+    import sys
+    input_zip = sys.argv[1] if len(sys.argv) > 1 else 'Brain-pruned.zip'
+    output_zip = sys.argv[2] if len(sys.argv) > 2 else 'content.zip'
+    main(input_zip, output_zip)

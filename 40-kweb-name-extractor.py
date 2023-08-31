@@ -7,7 +7,7 @@ import sys
 
 def main(zip_file_name):
     # Extract the ZIP file
-    extract_folder = './Brain-pruned'
+    extract_folder = '/tmp/Brain-pruned'
     Path(extract_folder).mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(zip_file_name, 'r') as zip_ref:
         zip_ref.extractall(extract_folder)

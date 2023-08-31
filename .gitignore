@@ -1,4 +1,5 @@
 *.zip
 */**.zip
+Brain.db
 kweb.db
 .pythonlibs/

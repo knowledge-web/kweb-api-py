@@ -17,7 +17,7 @@ if not os.path.exists(cache_folder):
 conn = sqlite3.connect('./kweb.db')
 cursor = conn.cursor()
 
-# Query to get list of entities with WikiData IDs (Corrected table name to nodes)
+# Query to get list of entities with WikiData IDs
 query = "SELECT id, wikidataId FROM nodes WHERE wikidataId IS NOT NULL"
 cursor.execute(query)
 
@@ -54,6 +54,7 @@ def fetch_wikidata(entity_id):
 for row in rows:
     fetch_wikidata(row[1])
 
+
 # Function to cross-reference and update database
 def cross_reference_and_update():
     global cache_folder
@@ -63,23 +64,46 @@ def cross_reference_and_update():
     # Loop through each cached file
     for file_name in os.listdir(cache_folder):
         # Load the cached data
-        with open(os.path.join(cache_folder, file_name), 'r') as f:
-            data = json.load(f)
-        
+        try:
+            with open(os.path.join(cache_folder, file_name), 'r') as f:
+                data = json.load(f)
+        except Exception as e:
+            print(f"Error reading cache file {file_name}: {e}")
+            continue
+
         # Extract WikiData ID from file name
         entity_id = file_name.replace(".json", "")
-        
+
+        # Check for 'claims' in data
+        if 'claims' not in data:
+            print(f"No claims found for entity {entity_id}.")
+            continue
+
         # Loop through claims to find relationships
-        if 'claims' in data:
-            for prop, claims in data['claims'].items():
-                for claim in claims:
-                    # Extract related WikiData ID if exists
-                    if 'mainsnak' in claim and 'datavalue' in claim['mainsnak'] and 'value' in claim['mainsnak']['datavalue']:
-                        related_id = claim['mainsnak']['datavalue']['value'].get('id', None)
-                        if related_id:
-                            # Update database
-                            cursor.execute("INSERT OR IGNORE INTO links (source, target) VALUES (?, ?)", (entity_id, related_id))
-                            print(f"Added link from {entity_id} to {related_id}")
+        for prop, claims in data['claims'].items():
+            for claim in claims:
+                # Check for required fields and their types
+                if 'mainsnak' not in claim or 'datavalue' not in claim['mainsnak'] or 'value' not in claim['mainsnak']['datavalue']:
+                    print(f"Required fields missing for claim in entity {entity_id}.")
+                    continue
+
+                value = claim['mainsnak']['datavalue']['value']
+                related_id = None
+
+                # Check the type of 'value' and assign related_id accordingly
+                if isinstance(value, dict):
+                    related_id = value.get('id', None)
+                elif isinstance(value, str):
+                    related_id = value
+                else:
+                    print(f"Unsupported type {type(value)} for value in entity {entity_id}.")
+                    continue
+
+                # Update database if related_id is found
+                if related_id:
+                    cursor.execute("INSERT OR IGNORE INTO links (source, target) VALUES (?, ?)", (entity_id, related_id))
+                    print(f"Added link from {entity_id} ({data.get('labels', {}).get('en', {}).get('value', 'Unknown')}) to {related_id}.")
+
 
 # Call the cross_reference_and_update function
 cross_reference_and_update()

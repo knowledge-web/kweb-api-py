@@ -46,6 +46,13 @@ conn_kweb = sqlite3.connect('kweb.db')
 c_kweb = conn_kweb.cursor()
 c_kweb.execute('''CREATE TABLE IF NOT EXISTS nodes (id TEXT PRIMARY KEY, wikilink TEXT)''')
 
+# Check if the column 'wikilink' exists
+c_kweb.execute("PRAGMA table_info(nodes)")
+columns = [column[1] for column in c_kweb.fetchall()]
+
+if 'wikilink' not in columns:
+    c_kweb.execute("ALTER TABLE nodes ADD COLUMN wikilink TEXT")
+
 # Insert/Update the mapped data into the table
 for thought_id, wikilink in id_to_wikilink_map.items():
     c_kweb.execute("INSERT OR REPLACE INTO nodes (id, wikilink) VALUES (?, ?)", (thought_id, wikilink))

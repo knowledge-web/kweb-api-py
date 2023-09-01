@@ -84,7 +84,6 @@ def index():
         <ul>
             <li><a href='/nodes'>/nodes</a> - List all node names and IDs</li>
             <li><a href='/nodes/root'>/nodes/root</a> - Get the root node along with its neighbors</li>
-            <li><a href='/f/'>/f/</a> - List all files</li>
         </ul>
         """
 

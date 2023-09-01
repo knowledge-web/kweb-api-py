@@ -64,21 +64,36 @@ def file_list():
 @app.route("/", methods=['GET'])
 def index():
   try:
-    table_names = query_db(
-        "SELECT name FROM sqlite_master WHERE type='table';")
+    table_names = query_db("SELECT name FROM sqlite_master WHERE type='table';")
     table_counts = {}
     missing_tables = []
+    nodes_stats = {}
+    
     for table in ["nodes", "links", "metadata"]:
       if table not in [t["name"] for t in table_names]:
         missing_tables.append(table)
+        
     for table in table_names:
-      count = query_db(f"SELECT COUNT(*) as count FROM {table['name']}",
-                       one=True)
+      count = query_db(f"SELECT COUNT(*) as count FROM {table['name']}", one=True)
       table_counts[table['name']] = count['count']
+      
+      # If it's the 'nodes' table, get additional stats
+      if table['name'] == 'nodes':
+        column_names = query_db("PRAGMA table_info(nodes);")
+        columns = [col['name'] for col in column_names]
+
+        if 'wikilink' in columns:
+          wikilink_count = query_db("SELECT COUNT(*) as count FROM nodes WHERE wikilink IS NOT NULL", one=True)
+          nodes_stats['wikilink_count'] = wikilink_count['count']
+
+        if 'wikidataId' in columns:
+          wikidataId_count = query_db("SELECT COUNT(*) as count FROM nodes WHERE wikidataId IS NOT NULL", one=True)
+          nodes_stats['wikidataId_count'] = wikidataId_count['count']
 
     html_content = f"""
         <h1>Welcome to KWeb API</h1>
         <p><strong>Stats:</strong> {table_counts}</p>
+        <p><strong>Nodes Stats:</strong> {nodes_stats}</p>
         <p><strong>Missing Tables:</strong> {missing_tables}</p>
         <h2>API Endpoints:</h2>
         <ul>

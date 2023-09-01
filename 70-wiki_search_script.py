@@ -11,8 +11,13 @@ try:
 except FileNotFoundError:
     cache = {}
 
+api_count = 0
+cache_count = 0
+
 def wikipedia_search(query):
+    global api_count, cache_count
     if query in cache:
+        cache_count += 1
         return cache[query]
     search_url = "https://en.wikipedia.org/w/api.php"
     params = {
@@ -24,10 +29,13 @@ def wikipedia_search(query):
     response = requests.get(search_url, params=params)
     data = response.json()
     if data.get("query", {}).get("search"):
+        api_count += 1
         page_title = data["query"]["search"][0]["title"]
         wiki_url = f"https://en.wikipedia.org/wiki/{page_title.replace(' ', '_')}"
         cache[query] = wiki_url
+        print(f"API call for {query} successful.")
         return wiki_url
+    print(f"API call for {query} returned no result.")
     return None
 
 # Connect to SQLite database
@@ -68,3 +76,7 @@ with open(cache_file, 'w') as f:
 print(f"Found {found_count} missing wikilinks.")
 print(f"Could not find {not_found_count} wikilinks.")
 print(f"Total nodes with missing wikilinks: {len(missing_wikilinks)}")
+print(f"API calls made: {api_count}")
+print(f"Cache hits: {cache_count}")
+print(f"Total entries tried: {len(missing_wikilinks)}")
+print(f"Total entries found: {found_count}")

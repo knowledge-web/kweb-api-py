@@ -11,8 +11,13 @@ try:
 except FileNotFoundError:
     wikidata_cache = {}
 
+api_count = 0
+cache_count = 0
+
 def fetch_wikidata_id(wikilink):
+    global api_count, cache_count
     if wikilink in wikidata_cache:
+        cache_count += 1
         return wikidata_cache[wikilink]
     params = {
         "action": "query",
@@ -26,8 +31,12 @@ def fetch_wikidata_id(wikilink):
     page = next(iter(data["query"]["pages"].values()))
     wikidata_id = page.get("pageprops", {}).get("wikibase_item")
     if wikidata_id:
+        api_count += 1
         wikidata_cache[wikilink] = wikidata_id
-    return wikidata_id
+        print(f"API call for {wikilink} successful.")
+        return wikidata_id
+    print(f"API call for {wikilink} returned no result.")
+    return None
 
 # Connect to SQLite database
 db_path = './kweb.db'
@@ -66,3 +75,7 @@ with open(wikidata_cache_file, 'w') as f:
 print(f"Found {found_count} missing Wikidata IDs.")
 print(f"Could not find {not_found_count} Wikidata IDs.")
 print(f"Total nodes with missing Wikidata IDs: {len(missing_wikidata_ids)}")
+print(f"API calls made: {api_count}")
+print(f"Cache hits: {cache_count}")
+print(f"Total entries tried: {len(missing_wikidata_ids)}")
+print(f"Total entries found: {found_count}")

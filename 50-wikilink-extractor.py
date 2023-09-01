@@ -5,6 +5,7 @@ import sqlite3
 
 # TODO modify this to add nodes.wikilink to kweb.db instead (if db not existing; create?)
 
+# TODO default to read thoughts from ./Brain.db thoughts table instead of JSON file. and content.zip instead of B02 folder 
 # Define paths
 db_folder_path = 'path/to/db'
 b02_folder_path = 'path/to/B02'

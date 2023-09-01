@@ -68,6 +68,7 @@ def index():
     table_counts = {}
     missing_tables = []
     nodes_stats = {}
+    links_stats = {}
     
     for table in ["nodes", "links", "metadata"]:
       if table not in [t["name"] for t in table_names]:
@@ -90,10 +91,20 @@ def index():
           wikidataId_count = query_db("SELECT COUNT(*) as count FROM nodes WHERE wikidataId IS NOT NULL", one=True)
           nodes_stats['wikidataId_count'] = wikidataId_count['count']
 
+      # If it's the 'links' table, get additional stats
+      if table['name'] == 'links':
+        column_names = query_db("PRAGMA table_info(links);")
+        columns = [col['name'] for col in column_names]
+
+        if 'name' in columns:
+          name_count = query_db("SELECT COUNT(*) as count FROM links WHERE name IS NOT NULL AND name != ''", one=True)
+          links_stats['name_count'] = name_count['count']
+
     html_content = f"""
         <h1>Welcome to KWeb API</h1>
         <p><strong>Stats:</strong> {table_counts}</p>
         <p><strong>Nodes Stats:</strong> {nodes_stats}</p>
+        <p><strong>Links Stats:</strong> {links_stats}</p>
         <p><strong>Missing Tables:</strong> {missing_tables}</p>
         <h2>API Endpoints:</h2>
         <ul>
@@ -105,7 +116,6 @@ def index():
     return make_response(html_content, 200, {'Content-Type': 'text/html'})
   except Exception as e:
     return jsonify({"error": str(e)})
-
 
 if __name__ == "__main__":
   app.run(host='0.0.0.0', port=5000)

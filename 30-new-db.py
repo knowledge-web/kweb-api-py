@@ -1,8 +1,12 @@
-
+import os
 import sqlite3
 import sys
 
 def create_new_db_adjusted(src_db_path, dest_db_path):
+    # Drop the destination database if it exists
+    if os.path.exists(dest_db_path):
+        os.remove(dest_db_path)
+
     src_conn = sqlite3.connect(src_db_path)
     dest_conn = sqlite3.connect(dest_db_path)
     src_cursor = src_conn.cursor()
@@ -10,16 +14,16 @@ def create_new_db_adjusted(src_db_path, dest_db_path):
     
     dest_cursor.execute("""
         CREATE TABLE nodes (
-            Id TEXT PRIMARY KEY,
-            Name TEXT,
-            Label TEXT,
-            TypeId TEXT
+            id TEXT PRIMARY KEY,
+            name TEXT,
+            label TEXT,
+            typeId TEXT
         )
     """)
     
     src_cursor.execute("SELECT Id, Name, Label, TypeId FROM thoughts")
     rows = src_cursor.fetchall()
-    dest_cursor.executemany("INSERT INTO nodes (Id, Name, Label, TypeId) VALUES (?, ?, ?, ?)", rows)
+    dest_cursor.executemany("INSERT INTO nodes (id, name, label, typeId) VALUES (?, ?, ?, ?)", rows)
     
     dest_cursor.execute("""
         CREATE TABLE links (

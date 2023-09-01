@@ -1,64 +1,97 @@
-
-from flask import Flask, jsonify, send_from_directory, make_response
-import os
+from flask import Flask, jsonify, request, send_file, send_from_directory, make_response
+from flask_cors import CORS
 import sqlite3
+import os
 
 app = Flask(__name__)
+CORS(app, resources={r"/*": {"origins": "*"}})
 
-def get_db_connection():
-    conn = sqlite3.connect("kweb.db")
-    return conn
 
-@app.route('/nodes', methods=['GET'])
+def query_db(query, args=(), one=False):
+  with sqlite3.connect('./kweb.db') as con:
+    cur = con.execute(query, args)
+    rv = [
+        dict((cur.description[idx][0], value) for idx, value in enumerate(row))
+        for row in cur.fetchall()
+    ]
+  return (rv[0] if rv else None) if one else rv
+
+
+@app.route("/nodes", methods=['GET'])
 def get_nodes():
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute('SELECT id, name FROM nodes')
-    nodes = cursor.fetchall()
-    conn.close()
-    return jsonify([{'id': id, 'name': name} for id, name in nodes])
+  nodes = query_db("SELECT id, name FROM nodes")
+  if all(node.get('name', None) == '' for node in nodes):
+    return jsonify({"warning": "All node names are empty", "nodes": nodes})
+  return jsonify(nodes)
 
-@app.route('/nodes/<int:node_id>', methods=['GET'])
-def get_node(node_id):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute('SELECT * FROM nodes WHERE id = ?', (node_id,))
-    node = cursor.fetchone()
-    if node is None:
-        return jsonify({'error': 'Node not found'}), 404
-    cursor.execute('SELECT * FROM links WHERE source = ? OR destination = ?', (node_id, node_id))
-    links = cursor.fetchall()
-    neighbor_ids = set()
-    for source, destination in links:
-        neighbor_ids.add(source if source != node_id else destination)
-    nodes = [dict(zip([column[0] for column in cursor.description], row)) for row in [node]]
-    for neighbor_id in neighbor_ids:
-        cursor.execute('SELECT * FROM nodes WHERE id = ?', (neighbor_id,))
-        nodes.append(dict(zip([column[0] for column in cursor.description], cursor.fetchone())))
-    conn.close()
-    return jsonify({'nodes': nodes, 'links': links})
 
-@app.route('/f/<path:filename>', methods=['GET'])
-def serve_files(filename):
-    return send_from_directory('.', filename)
+@app.route("/nodes/<string:node_id>", methods=['GET'])
+def get_node_with_neighbors(node_id):
+  nodes = query_db("SELECT * FROM nodes WHERE id=?", (node_id, ))
+  links = query_db("SELECT * FROM links WHERE source=? OR target=?",
+                   (node_id, node_id))
+  neighbor_ids = set()
+  for link in links:
+    neighbor_ids.add(link['source'])
+    neighbor_ids.add(link['target'])
+  neighbor_ids.discard(node_id)
+  neighbors = query_db(
+      f"SELECT * FROM nodes WHERE id IN ({','.join(['?' for _ in neighbor_ids])})",
+      tuple(neighbor_ids))
+  return jsonify({"nodes": nodes + neighbors, "links": links})
 
-@app.route('/f/', methods=['GET'])
-def list_files():
-    files = os.listdir('.')
-    file_links = [f'<li><a href="/f/{file}">{file}</a></li>' for file in files]
-    return make_response(f'<html><body><ul>{" ".join(file_links)}</ul></body></html>', 200, {'Content-Type': 'text/html'})
 
-@app.route('/', methods=['GET'])
-def home():
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    stats = {}
-    for table in ['nodes', 'links', 'metadata']:
-        cursor.execute(f'SELECT COUNT(*) FROM {table}')
-        stats[table] = cursor.fetchone()[0]
-    conn.close()
-    doc_html = "<h1>API Documentation</h1>" +                "<ul>" +                "<li><a href='/nodes'>/nodes</a> - List all node names and ids.</li>" +                "<li>/nodes/:id - Fetch a node by its id along with its neighbors.</li>" +                "<li><a href='/f/'>/f/</a> - File listing.</li>" +                "<li>/f/:filename - Serve static files.</li>" +                "</ul>"
-    return make_response(f'<html><body>' +                          f'<h1>Stats</h1>' +                          f'<p>Nodes: {stats["nodes"]}</p>' +                          f'<p>Links: {stats["links"]}</p>' +                          f'<p>Metadata: {stats["metadata"]}</p>' +                          f'{doc_html}' +                          f'</body></html>', 200, {'Content-Type': 'text/html'})
+@app.route("/nodes/root", methods=['GET'])
+def get_root_node():
+  return get_node_with_neighbors("335994d7-2aff-564c-9c20-d2c362e82f8c")
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+
+@app.route("/files/<path:path>", methods=['GET'])
+def get_file(path):
+  return send_from_directory('.', path)
+
+
+@app.route("/f/", methods=['GET'])
+def file_list():
+  files = os.listdir('.')
+  html_content = "<h1>File List</h1><ul>"
+  for file in files:
+    html_content += f"<li><a href='/files/{file}'>{file}</a></li>"
+  html_content += "</ul>"
+  return make_response(html_content, 200, {'Content-Type': 'text/html'})
+
+
+@app.route("/", methods=['GET'])
+def index():
+  try:
+    table_names = query_db(
+        "SELECT name FROM sqlite_master WHERE type='table';")
+    table_counts = {}
+    missing_tables = []
+    for table in ["nodes", "links", "metadata"]:
+      if table not in [t["name"] for t in table_names]:
+        missing_tables.append(table)
+    for table in table_names:
+      count = query_db(f"SELECT COUNT(*) as count FROM {table['name']}",
+                       one=True)
+      table_counts[table['name']] = count['count']
+
+    html_content = f"""
+        <h1>Welcome to KWeb API</h1>
+        <p><strong>Stats:</strong> {table_counts}</p>
+        <p><strong>Missing Tables:</strong> {missing_tables}</p>
+        <h2>API Endpoints:</h2>
+        <ul>
+            <li><a href='/nodes'>/nodes</a> - List all node names and IDs</li>
+            <li><a href='/nodes/root'>/nodes/root</a> - Get the root node along with its neighbors</li>
+            <li><a href='/f/'>/f/</a> - List all files</li>
+        </ul>
+        """
+
+    return make_response(html_content, 200, {'Content-Type': 'text/html'})
+  except Exception as e:
+    return jsonify({"error": str(e)})
+
+
+if __name__ == "__main__":
+  app.run(host='0.0.0.0', port=5000)

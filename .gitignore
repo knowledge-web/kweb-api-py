@@ -3,4 +3,5 @@
 Brain.db
 kweb.db
 .pythonlibs/
+.wikidata-*
 wikidata-cache/

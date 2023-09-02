@@ -45,21 +45,29 @@ def get_node_with_neighbors(node_id):
 def get_root_node():
   return get_node_with_neighbors("335994d7-2aff-564c-9c20-d2c362e82f8c")
 
-
 @app.route("/files/<path:path>", methods=['GET'])
 def get_file(path):
-  return send_from_directory('.', path)
+    if os.path.isdir(path):
+        return file_list(path)
+    else:
+        directory, filename = os.path.split(path)
+        return send_from_directory(directory, filename)
 
+def file_list(directory='.'):
+    files = os.listdir(directory)
+    html_content = "<h1>File List</h1><ul>"
+    for file in files:
+        full_path = os.path.join(directory, file)
+        if os.path.isdir(full_path):
+            html_content += f"<li><a href='/files/{full_path}'>{file}/</a></li>"
+        else:
+            html_content += f"<li><a href='/files/{full_path}'>{file}</a></li>"
+    html_content += "</ul>"
+    return make_response(html_content, 200, {'Content-Type': 'text/html'})
 
 @app.route("/f/", methods=['GET'])
-def file_list():
-  files = os.listdir('.')
-  html_content = "<h1>File List</h1><ul>"
-  for file in files:
-    html_content += f"<li><a href='/files/{file}'>{file}</a></li>"
-  html_content += "</ul>"
-  return make_response(html_content, 200, {'Content-Type': 'text/html'})
-
+def root_file_list():
+    return file_list()
 
 @app.route("/", methods=['GET'])
 def index():

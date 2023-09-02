@@ -3,6 +3,8 @@ import json
 import requests
 import sqlite3
 
+# TODO Does not seem to use cache properly; fix. Halt mid execution & restart should pickup (pretty much) where it left off
+
 # Initialize or load Wikidata ID cache by name
 wikidata_name_cache_file = "./.wikidata-name-search-cache.json"
 try:

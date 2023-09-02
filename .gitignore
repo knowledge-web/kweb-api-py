@@ -5,3 +5,5 @@ kweb.db
 .pythonlibs/
 .wikidata-*
 wikidata-cache/
+.wiki-search-cache.json
+archived/

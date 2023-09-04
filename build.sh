@@ -18,3 +18,4 @@ python 120-link-names-from-json.py
 python 130-make-wikidata-cache.py
 python 140-wikidata-links-generator.py
 python 120-link-names-from-json.py ./wikidata-links.json
+python 150-migrate-colors.py

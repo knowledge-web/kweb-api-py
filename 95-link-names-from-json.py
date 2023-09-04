@@ -7,6 +7,7 @@ searched_count = 0
 found_count = 0
 
 # Default JSON file
+# ./wikidata-links.json is another
 json_file = './old-links.json'
 
 # Check if a command-line argument is provided

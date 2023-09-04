@@ -1,9 +1,6 @@
-
 import json
 import requests
 import sqlite3
-
-# TODO Does not seem to use cache properly; fix. Halt mid execution & restart should pickup (pretty much) where it left off
 
 # Initialize or load Wikidata ID cache by name
 wikidata_name_cache_file = "./.wikidata-name-search-cache.json"
@@ -21,6 +18,7 @@ def fetch_wikidata_id_by_name(name):
     if name in wikidata_name_cache:
         cache_count += 1
         return wikidata_name_cache[name]
+        
     params = {
         "action": "wbsearchentities",
         "format": "json",
@@ -34,44 +32,41 @@ def fetch_wikidata_id_by_name(name):
         api_count += 1
         wikidata_id = data["search"][0]["id"]
         wikidata_name_cache[name] = wikidata_id
+        with open(wikidata_name_cache_file, 'w') as f:
+            json.dump(wikidata_name_cache, f)
         print(f"API call for {name} successful.")
         return wikidata_id
     print(f"API call for {name} returned no result.")
     return None
 
-# Connect to SQLite database
-db_path = './kweb.db'
-conn = sqlite3.connect(db_path)
-cursor = conn.cursor()
+# Using a context manager for SQLite database operations
+with sqlite3.connect('./kweb.db') as conn:
+    cursor = conn.cursor()
 
-# Fetch nodes with missing wikidataId
-cursor.execute("SELECT id, name FROM nodes WHERE wikidataId IS NULL;")
-missing_wikidata_ids_by_name = cursor.fetchall()
+    # Fetch nodes with missing wikidataId
+    cursor.execute("SELECT id, name FROM nodes WHERE wikidataId IS NULL;")
+    missing_wikidata_ids_by_name = cursor.fetchall()
+    
+    found_count = 0
+    not_found_count = 0
+    
+    # Iterate through nodes and fetch Wikidata ID by name
+    for node_id, node_name in missing_wikidata_ids_by_name:
+        wikidata_id = fetch_wikidata_id_by_name(node_name)
+        if wikidata_id is None:
+            cursor.execute("SELECT name, alias FROM metadata WHERE id = ?;", (node_id,))
+            metadata = cursor.fetchone()
+            if metadata:
+                metadata_name, metadata_alias = metadata
+                wikidata_id = fetch_wikidata_id_by_name(metadata_name) or fetch_wikidata_id_by_name(metadata_alias)
+        if wikidata_id:
+            cursor.execute("UPDATE nodes SET wikidataId = ? WHERE id = ?;", (wikidata_id, node_id))
+            found_count += 1
+        else:
+            not_found_count += 1
 
-found_count = 0
-not_found_count = 0
-
-# Iterate through nodes and fetch Wikidata ID by name
-for node_id, node_name in missing_wikidata_ids_by_name:
-    wikidata_id = fetch_wikidata_id_by_name(node_name)
-    if wikidata_id is None:
-        cursor.execute("SELECT name, alias FROM metadata WHERE id = ?;", (node_id,))
-        metadata = cursor.fetchone()
-        if metadata:
-            metadata_name, metadata_alias = metadata
-            wikidata_id = fetch_wikidata_id_by_name(metadata_name) or fetch_wikidata_id_by_name(metadata_alias)
-    if wikidata_id:
-        cursor.execute("UPDATE nodes SET wikidataId = ? WHERE id = ?;", (wikidata_id, node_id))
-        found_count += 1
-    else:
-        not_found_count += 1
-
-# Commit changes to the database
-conn.commit()
-
-# Update the Wikidata ID cache file by name
-with open(wikidata_name_cache_file, 'w') as f:
-    json.dump(wikidata_name_cache, f)
+    # Commit changes to the database
+    conn.commit()
 
 # Print debug information
 print(f"Found {found_count} missing Wikidata IDs.")

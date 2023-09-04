@@ -1,9 +1,6 @@
-
 import json
 import requests
 import sqlite3
-
-# TODO Does not seem to use cache properly; fix. Halt mid execution & restart should pickup (pretty much) where it left off
 
 # Initialize or load Wikidata ID cache
 wikidata_cache_file = "./.wikidata-search-cache.json"
@@ -21,6 +18,7 @@ def fetch_wikidata_id(wikilink):
     if wikilink in wikidata_cache:
         cache_count += 1
         return wikidata_cache[wikilink]
+        
     params = {
         "action": "query",
         "format": "json",
@@ -35,43 +33,40 @@ def fetch_wikidata_id(wikilink):
     if wikidata_id:
         api_count += 1
         wikidata_cache[wikilink] = wikidata_id
+        with open(wikidata_cache_file, 'w') as f:
+            json.dump(wikidata_cache, f)
         print(f"API call for {wikilink} successful.")
         return wikidata_id
     print(f"API call for {wikilink} returned no result.")
     return None
 
-# Connect to SQLite database
-db_path = './kweb.db'
-conn = sqlite3.connect(db_path)
-cursor = conn.cursor()
+# Using a context manager for database operations
+with sqlite3.connect('./kweb.db') as conn:
+    cursor = conn.cursor()
+    
+    # Add 'wikidataId' column if not exists
+    cursor.execute("PRAGMA table_info(nodes);")
+    if 'wikidataId' not in [column[1] for column in cursor.fetchall()]:
+        cursor.execute("ALTER TABLE nodes ADD COLUMN wikidataId TEXT;")
+        
+    # Fetch nodes with missing wikidataId
+    cursor.execute("SELECT id, wikilink FROM nodes WHERE wikidataId IS NULL AND wikilink IS NOT NULL;")
+    missing_wikidata_ids = cursor.fetchall()
+    
+    found_count = 0
+    not_found_count = 0
+    
+    # Iterate through nodes and fetch Wikidata ID
+    for node_id, wikilink in missing_wikidata_ids:
+        wikidata_id = fetch_wikidata_id(wikilink)
+        if wikidata_id:
+            cursor.execute("UPDATE nodes SET wikidataId = ? WHERE id = ?;", (wikidata_id, node_id))
+            found_count += 1
+        else:
+            not_found_count += 1
 
-# Add 'wikidataId' column if not exists
-cursor.execute("PRAGMA table_info(nodes);")
-if 'wikidataId' not in [column[1] for column in cursor.fetchall()]:
-    cursor.execute("ALTER TABLE nodes ADD COLUMN wikidataId TEXT;")
-
-# Fetch nodes with missing wikidataId
-cursor.execute("SELECT id, wikilink FROM nodes WHERE wikidataId IS NULL AND wikilink IS NOT NULL;")
-missing_wikidata_ids = cursor.fetchall()
-
-found_count = 0
-not_found_count = 0
-
-# Iterate through nodes and fetch Wikidata ID
-for node_id, wikilink in missing_wikidata_ids:
-    wikidata_id = fetch_wikidata_id(wikilink)
-    if wikidata_id:
-        cursor.execute("UPDATE nodes SET wikidataId = ? WHERE id = ?;", (wikidata_id, node_id))
-        found_count += 1
-    else:
-        not_found_count += 1
-
-# Commit changes to the database
-conn.commit()
-
-# Update the Wikidata ID cache file
-with open(wikidata_cache_file, 'w') as f:
-    json.dump(wikidata_cache, f)
+    # Commit changes to the database
+    conn.commit()
 
 # Print debug information
 print(f"Found {found_count} missing Wikidata IDs.")

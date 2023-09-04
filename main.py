@@ -2,10 +2,19 @@ from flask import Flask, jsonify, request, send_file, send_from_directory, make_
 from flask_cors import CORS
 import sqlite3
 import os
+import zipfile
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
+# Function to unzip contents.zip to a temporary folder
+def unzip_contents_to_tmp():
+    with zipfile.ZipFile('content.zip', 'r') as zip_ref:
+        zip_ref.extractall('/tmp/contents')
+
+# Unzip contents.zip to /tmp/contents on start (if it makes sense to do so)
+# Comment this line if you don't want to unzip on start
+unzip_contents_to_tmp()
 
 def query_db(query, args=(), one=False):
   with sqlite3.connect('./kweb.db') as con:
@@ -17,7 +26,7 @@ def query_db(query, args=(), one=False):
   return (rv[0] if rv else None) if one else rv
 
 
-@app.route("/nodes", methods=['GET'])
+@app.route("/nodes/", methods=['GET'])
 def get_nodes():
   nodes = query_db("SELECT id, name FROM nodes")
   if all(node.get('name', None) == '' for node in nodes):
@@ -27,18 +36,46 @@ def get_nodes():
 
 @app.route("/nodes/<string:node_id>", methods=['GET'])
 def get_node_with_neighbors(node_id):
-  nodes = query_db("SELECT * FROM nodes WHERE id=?", (node_id, ))
-  links = query_db("SELECT * FROM links WHERE source=? OR target=?",
-                   (node_id, node_id))
-  neighbor_ids = set()
-  for link in links:
-    neighbor_ids.add(link['source'])
-    neighbor_ids.add(link['target'])
-  neighbor_ids.discard(node_id)
-  neighbors = query_db(
-      f"SELECT * FROM nodes WHERE id IN ({','.join(['?' for _ in neighbor_ids])})",
-      tuple(neighbor_ids))
-  return jsonify({"nodes": nodes + neighbors, "links": links})
+    nodes = query_db("SELECT * FROM nodes WHERE id=?", (node_id, ))
+    links = query_db("SELECT * FROM links WHERE source=? OR target=?",
+                     (node_id, node_id))
+    
+    # Initialize markdown content
+    md_content = None
+
+    # Check if Notes.md exists for this node_id
+    md_file_path = f'/tmp/contents/{node_id}/Notes.md'
+    if os.path.exists(md_file_path):
+        with open(md_file_path, 'r') as md_file:
+            md_content = md_file.read()
+            # md_content = markdown.markdown(md_content)  # Convert to HTML if needed
+
+    # Add md content to the main node if it exists
+    if nodes:
+        nodes[0]['content'] = md_content
+    
+    neighbor_ids = set()
+    for link in links:
+      neighbor_ids.add(link['source'])
+      neighbor_ids.add(link['target'])
+    neighbor_ids.discard(node_id)
+    
+    # Query for neighbor nodes
+    neighbors = query_db(
+        f"SELECT * FROM nodes WHERE id IN ({','.join(['?' for _ in neighbor_ids])})",
+        tuple(neighbor_ids))
+    
+    # Query for links between neighboring nodes
+    neighbor_links = query_db(
+        f"SELECT * FROM links WHERE (source IN ({','.join(['?' for _ in neighbor_ids])}) AND target IN ({','.join(['?' for _ in neighbor_ids])}))",
+        tuple(neighbor_ids) * 2)
+  
+    # Add secondary=true to new links
+    for link in neighbor_links:
+        link['secundary'] = True
+      
+    return jsonify({"nodes": nodes + neighbors, "links": links + neighbor_links})
+
 
 
 @app.route("/nodes/root", methods=['GET'])

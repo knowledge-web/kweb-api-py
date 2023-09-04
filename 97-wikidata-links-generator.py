@@ -1,21 +1,11 @@
-
 import os
 import json
 from zipfile import ZipFile
 from collections import Counter
 
-# Known P-values and their human-readable forms
-known_p_values = {
-    'P31': 'Instance of',
-    'P1889': 'Different from',
-    'P282': 'Writing system',
-    'P407': 'Language of work or name',
-    'P910': "Topic's main Wikimedia portal",
-    'P279': 'Subclass of',
-    'P5008': 'Wikishootme ID',
-    'P2283': 'Uses',
-    'P527': 'Has part'
-}
+# Load known P-values and their human-readable forms from a JSON file
+with open('./wikidata-pid-to-label.json', 'r') as f:
+    known_p_values = json.load(f)
 
 # Function to filter claims and create a JSON object
 def filter_and_store_claims(claims_dict):

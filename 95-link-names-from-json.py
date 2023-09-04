@@ -1,12 +1,20 @@
-import sqlite3
 import json
+import sqlite3
+import sys
 
 # Initialize counters
 searched_count = 0
 found_count = 0
 
+# Default JSON file
+json_file = './old-links.json'
+
+# Check if a command-line argument is provided
+if len(sys.argv) > 1:
+    json_file = sys.argv[1]
+
 # Read json links
-with open('./old-links.json', 'r') as f:
+with open(json_file, 'r') as f:
     old_links = json.load(f)
 
 # Connect to SQLite database

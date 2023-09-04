@@ -10,3 +10,5 @@ python 40-kweb-wikilink-extractor.py Brain-pruned.zip
 # TODO kweb-wikilink-finder.py - used node.Name & metaName from above 
 # TODO kweb-wikidataid-finder.py
 # TODo kweb-wikidata-cache...
+
+python 95-link-names-from-json.py wikidata-link.json

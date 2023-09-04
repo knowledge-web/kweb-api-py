@@ -7,7 +7,7 @@ import sys
 
 # Command-line arguments
 in_zip = sys.argv[1] if len(sys.argv) > 1 else 'Brain.zip'
-out_zip = sys.argv[2] if len(sys.argv) > 2 else 'Brain-pruned.zip'
+out_zip = sys.argv[2] if len(sys.argv) > 2 else 'Brain.zip'
 
 # Unzipping the uploaded file
 zip_path = in_zip

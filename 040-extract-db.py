@@ -20,7 +20,7 @@ def rezip_folder(folder_path, zip_name):
                 if file != 'Brain.db':
                     zipf.write(os.path.join(root, file), os.path.relpath(os.path.join(root, file), folder_path))
 
-def main(input_zip='Brain-pruned.zip', output_zip='content.zip'):
+def main(input_zip='Brain.zip', output_zip='content.zip'):
     temp_dir = '/tmp/brain_pruned_extraction'
     os.makedirs(temp_dir, exist_ok=True)
     unzip_file(input_zip, temp_dir)
@@ -31,6 +31,6 @@ def main(input_zip='Brain-pruned.zip', output_zip='content.zip'):
 
 if __name__ == '__main__':
     import sys
-    input_zip = sys.argv[1] if len(sys.argv) > 1 else 'Brain-pruned.zip'
+    input_zip = sys.argv[1] if len(sys.argv) > 1 else 'Brain.zip'
     output_zip = sys.argv[2] if len(sys.argv) > 2 else 'content.zip'
     main(input_zip, output_zip)

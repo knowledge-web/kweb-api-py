@@ -5,9 +5,9 @@ from bs4 import BeautifulSoup
 import markdown  # Make sure to install this library
 
 # Define paths
-input_zip_path = './Brain-pruned.zip'
+input_zip_path = './Brain.zip'
 unzip_dir = '/tmp/unzipped_data'
-output_zip_path = './Brain-pruned.zip'
+output_zip_path = './Brain.zip'
 
 # Unzip the file
 with zipfile.ZipFile(input_zip_path, 'r') as zip_ref:

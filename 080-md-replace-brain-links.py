@@ -62,5 +62,5 @@ def handle_zip(input_zip_path, output_zip_path):
                     zip_ref.write(file_path, arcname)
 
 # Example usage:
-handle_zip('./content.zip', './content2.zip')
+handle_zip('./content.zip', './content.zip')
                

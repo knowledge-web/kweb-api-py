@@ -7,3 +7,4 @@ kweb.db
 wikidata-cache/
 .wiki-search-cache.json
 archived/
+wikidata-links.json

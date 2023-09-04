@@ -5,7 +5,7 @@ import json
 searched_count = 0
 found_count = 0
 
-# Read old-links.json
+# Read json links
 with open('./old-links.json', 'r') as f:
     old_links = json.load(f)
 
@@ -37,19 +37,17 @@ for row in cursor.fetchall():
     # Build the key to search in old-links.json
     key = f'{source_wikidataId}-{target_wikidataId}'
 
-    print(f'Debug: Searching for key {key} ...')
+    print(".", end="", flush=True)
 
     # Check if the key exists in old-links.json
     if key in old_links:
         found_count += 1
         new_name = old_links[key]
-        print(f'Debug: Found. Updating name to {new_name}.')
+        print(f'\nDebug: Found. Updating name to {new_name}.')
 
         # Update the name in the database
         cursor.execute('UPDATE links SET name = ? WHERE source = ? AND target = ?', (new_name, source, target))
         conn.commit()
-    else:
-        print('Debug: Not found.')
 
 # Close the database connection
 conn.close()

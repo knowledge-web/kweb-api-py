@@ -8,3 +8,6 @@ wikidata-cache/
 .wiki-search-cache.json
 archived/
 wikidata-links.json
+
+entities.txt
+entities.json

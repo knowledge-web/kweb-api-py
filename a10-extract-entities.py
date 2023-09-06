@@ -1,54 +1,63 @@
-
-import json
-import re
-import zipfile
+# Import necessary libraries
 import os
-from collections import Counter
+import zipfile
+import re
+import spacy
+nlp = spacy.load("en_core_web_md")
 
-# Read the relationship-names.txt file from the current directory
-with open('./relationship-names.txt', 'r') as f:
-    relationship_names = f.readlines()
-
-# Remove newline characters and surround each string with square brackets
-relationship_names = [f"[{{name.strip()}}]" for name in relationship_names]
-
-# Unzip the content.zip file into the specified directory
-with zipfile.ZipFile('../content.zip', 'r') as zip_ref:
-    zip_ref.extractall('./unzipped_content/')
+# Unzip the content.zip file into /tmp/
+with zipfile.ZipFile('./content.zip', 'r') as zip_ref:
+    zip_ref.extractall('/tmp/unzipped_content/')
+  
+# Define the directory where the unzipped .md files are stored
+unzip_dir = '/tmp/unzipped_content/'
 
 # List .md files recursively
 md_files = []
-for root, dirs, files in os.walk('./unzipped_content/'):
+for root, dirs, files in os.walk(unzip_dir):
     for file in files:
         if file.endswith(".md"):
             md_files.append(os.path.join(root, file))
 
-# Initialize a new Counter to store the counts of each comprehensive entity
-comprehensive_entity_count = Counter()
+# Read the relationship names from a text file (one name per line)
+with open('./relationship-names.txt', "r") as f:
+    relationship_names = f.readlines()
 
-# Define a regular expression pattern to match a relationship name followed by a space and then a letter
-pattern_template = r"{{}} (?P<entity>[A-Za-z\s\-]+)"
+# Remove newline characters and surround each string with square brackets
+relationship_names = [f"[{name.strip()}]" for name in relationship_names]
 
-# Search for relationship names in each .md file
+# Initialize a set to store extracted entities
+extracted_entities = set()
+
+# Regular expression pattern for capturing words following a relationship name
+pattern_suffix = r"([\s\w]+)"
+
+# Search for relationship names in each .md file and extract entities
 for md_file in md_files:
-    with open(md_file, 'r', encoding='utf-8', errors='ignore') as f:
+    with open(md_file, "r", encoding="utf-8", errors="ignore") as f:
         content = f.read()
     for name in relationship_names:
-        pattern = re.compile(pattern_template.format(re.escape(name)))
-        matches = pattern.findall(content)
-        # Filter out entities that don't start with a capital letter
-        comprehensive_entities = [match.strip() for match in matches if match.strip()[0].isupper()]
-        comprehensive_entity_count.update(comprehensive_entities)
+        for match in re.findall(f"{re.escape(name)}{pattern_suffix}", content):
+            # Extract text following the relationship name
+            text_to_analyze = match.strip()
+            
+            # Perform NER on the text
+            doc = nlp(text_to_analyze)
+            
+            # Add the recognized entities to the set
+            for ent in doc.ents:
+                if ent.label_ == "PERSON":
+                    extracted_entities.add(ent.text)
 
-# Sort the entities by occurrence counts in descending order
-sorted_entities = [entity for entity, _ in comprehensive_entity_count.most_common()]
+# Save the extracted entities to a text file
+with open("extracted_entities_improved.txt", "w") as f:
+    for entity in extracted_entities:
+        f.write(f"{entity}\n")
 
-# Create the JSON object with sorted entities as keys and values set to null
-sorted_entities_json = {{entity: None for entity in sorted_entities}}
+# Count of total and unique entities
+total_entities = len(extracted_entities)
+unique_entities = len(set(extracted_entities))
 
-# Output the JSON object
-print(json.dumps(sorted_entities_json, ensure_ascii=False, indent=4))
-
-# Save the JSON object to a file
-with open('./a-entities.json', 'w') as f:
-    json.dump(sorted_entities_json, f, ensure_ascii=False, indent=4)
+print(f"NER extraction completed. Extracted entities saved to 'entities.txt'.")
+print(f"Total entities extracted: {total_entities}")
+print(f"Unique entities extracted: {unique_entities}")

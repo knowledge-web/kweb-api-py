@@ -1,11 +1,11 @@
-
 import json
 import sqlite3
 
-def populate_json_with_wikidata_ids(json_file_path, db_path, updated_json_file_path):
-    # Load the JSON file
-    with open(json_file_path, 'r') as f:
-        sorted_entities = json.load(f)
+def populate_json_with_wikidata_ids_from_txt(txt_file_path, db_path, updated_json_file_path):
+    # Load the entities from the text file
+    with open(txt_file_path, 'r') as f:
+        lines = f.readlines()
+    sorted_entities = {line.strip(): None for line in lines}
 
     # Connect to the SQLite database
     conn = sqlite3.connect(db_path)
@@ -17,7 +17,7 @@ def populate_json_with_wikidata_ids(json_file_path, db_path, updated_json_file_p
     metadata_alias_counter = 0
     not_found_counter = 0
 
-    # Iterate through JSON keys and update values with Wikidata IDs
+    # Iterate through the keys and update values with Wikidata IDs
     for key in sorted_entities.keys():
         cursor.execute("SELECT wikidataId FROM nodes WHERE LOWER(name) = LOWER(?) AND wikidataId IS NOT NULL", (key,))
         result = cursor.fetchone()
@@ -26,7 +26,6 @@ def populate_json_with_wikidata_ids(json_file_path, db_path, updated_json_file_p
             sorted_entities[key] = result[0]
             nodes_counter += 1
         else:
-            # Check metadata.name
             cursor.execute("SELECT wikidataId FROM metadata INNER JOIN nodes ON metadata.id = nodes.id WHERE LOWER(metadata.name) = LOWER(?) AND wikidataId IS NOT NULL", (key,))
             result = cursor.fetchone()
             
@@ -34,7 +33,6 @@ def populate_json_with_wikidata_ids(json_file_path, db_path, updated_json_file_p
                 sorted_entities[key] = result[0]
                 metadata_name_counter += 1
             else:
-                # Check metadata.alias
                 cursor.execute("SELECT wikidataId FROM metadata INNER JOIN nodes ON metadata.id = nodes.id WHERE LOWER(metadata.alias) = LOWER(?) AND wikidataId IS NOT NULL", (key,))
                 result = cursor.fetchone()
                 
@@ -59,8 +57,9 @@ def populate_json_with_wikidata_ids(json_file_path, db_path, updated_json_file_p
 
 # Example usage
 if __name__ == "__main__":
-    json_file_path = "a-entities.json"
+    txt_file_path = "./entities.txt"
     db_path = "kweb.db"
-    updated_json_file_path = "a-entities.json"
+    updated_json_file_path = "entities.json"
     
-    populate_json_with_wikidata_ids(json_file_path, db_path, updated_json_file_path)
+    populate_json_with_wikidata_ids_from_txt(txt_file_path, db_path, updated_json_file_path)
+  

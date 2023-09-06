@@ -24,7 +24,7 @@ def fetch_wikidata_id(query):
 
 def main():
     # Load the JSON file
-    with open("a-entities.json", "r") as f:
+    with open("entities.json", "r") as f:
         data = json.load(f)
     
     successes = 0
@@ -44,7 +44,7 @@ def main():
             sleep(0.5)  # To avoid rate-limiting
     
     # Update the JSON file
-    with open("a-entities.json", "w") as f:
+    with open("entities.json", "w") as f:
         json.dump(data, f)
     
     print(f"\nCompleted. Successes: {successes}, Failures: {failures}")

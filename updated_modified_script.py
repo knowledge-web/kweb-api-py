@@ -1,22 +1,14 @@
-
 # Import necessary libraries
 import os
 import zipfile
 import re
 import spacy
-nlp = spacy.load("en_core_web_sm")
-
-#Successfully installed en-core-web-md-3.6.0
-#import spacy.cli
-#spacy.cli.download("en_core_web_sm")
+nlp = spacy.load("en_core_web_md")
 
 # Unzip the content.zip file into /tmp/
 with zipfile.ZipFile('./content.zip', 'r') as zip_ref:
     zip_ref.extractall('/tmp/unzipped_content/')
-
-# Load the SpaCy NER model
-nlp = spacy.load("en_core_web_sm")
-
+  
 # Define the directory where the unzipped .md files are stored
 unzip_dir = '/tmp/unzipped_content/'
 
@@ -34,8 +26,8 @@ with open('./relationship-names.txt', "r") as f:
 # Remove newline characters and surround each string with square brackets
 relationship_names = [f"[{name.strip()}]" for name in relationship_names]
 
-# Initialize a list to store extracted entities
-extracted_entities = []
+# Initialize a set to store extracted entities
+extracted_entities = set()
 
 # Regular expression pattern for checking if a string is followed by at least one space and a letter
 pattern_suffix = r"\s+[a-zA-Z]"
@@ -52,13 +44,19 @@ for md_file in md_files:
             # Perform NER on the text
             doc = nlp(text_to_analyze)
             
-            # Add the recognized entities to the list
+            # Add the recognized entities to the set
             for ent in doc.ents:
-                extracted_entities.append(ent.text)
+                extracted_entities.add(ent.text)
 
 # Save the extracted entities to a text file
 with open("extracted_entities.txt", "w") as f:
     for entity in extracted_entities:
         f.write(f"{entity}\n")
 
-print("NER extraction completed. Extracted entities saved to 'extracted_entities.txt'.")
+# Count of total and unique entities
+total_entities = len(extracted_entities)
+unique_entities = len(set(extracted_entities))
+
+print(f"NER extraction completed. Extracted entities saved to 'extracted_entities.txt'.")
+print(f"Total entities extracted: {total_entities}")
+print(f"Unique entities extracted: {unique_entities}")

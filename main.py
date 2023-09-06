@@ -3,9 +3,18 @@ from flask_cors import CORS
 import sqlite3
 import os
 import zipfile
+import re
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
+
+# Function to unzip media.zip to a temporary folder
+def unzip_media_to_tmp():
+    with zipfile.ZipFile('./media.zip', 'r') as zip_ref:
+        zip_ref.extractall('/tmp/media')
+
+# Unzip media.zip to /tmp/media on start
+unzip_media_to_tmp()
 
 # Function to unzip contents.zip to a temporary folder
 def unzip_contents_to_tmp():
@@ -101,6 +110,26 @@ def file_list(directory='.'):
             html_content += f"<li><a href='/files/{full_path}'>{file}</a></li>"
     html_content += "</ul>"
     return make_response(html_content, 200, {'Content-Type': 'text/html'})
+
+@app.route("/icons/<string:node_id>", methods=['GET'])
+def get_icon(node_id):
+    # Validate node_id
+    if not re.match(r'^[-0-9a-f]{36}$', node_id):
+        return make_response("Invalid ID", 400)
+    
+    # Try to find the icon for the node
+    icon_path = os.path.join('/tmp/media', node_id, '.data', 'Icon.png')
+    if os.path.exists(icon_path):
+        return send_file(icon_path)
+
+    # If icon for the node doesn't exist, try to find the icon for its type
+    node = query_db("SELECT * FROM nodes WHERE id=?", (node_id, ), one=True)
+    if node and node.get('TypeId'):
+        type_icon_path = os.path.join('/tmp/media', node['TypeId'], '.data', 'Icon.png')
+        if os.path.exists(type_icon_path):
+            return send_file(type_icon_path)
+
+    return make_response("Not Found", 404)
 
 @app.route("/f/", methods=['GET'])
 def root_file_list():

@@ -3,6 +3,8 @@ import json
 import requests
 from time import sleep
 
+# TODO Save state often after every search perhaps, not to lose work done...
+
 def fetch_wikidata_id(query):
     try:
         url = "https://www.wikidata.org/w/api.php"

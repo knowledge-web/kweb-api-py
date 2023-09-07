@@ -13,6 +13,7 @@ markdown = "3.4.4"
 beautifulsoup4 = "4.12.2"
 bs4 = "^0.0.1"
 spacy = "3.6.1"
+click = "8.1.7"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

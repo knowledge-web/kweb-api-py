@@ -62,6 +62,7 @@ def get_node_with_neighbors(node_id):
     # Add md content to the main node if it exists
     if nodes:
         nodes[0]['content'] = md_content
+        nodes[0]['level'] = 0
     
     neighbor_ids = set()
     for link in links:
@@ -83,6 +84,9 @@ def get_node_with_neighbors(node_id):
     for link in neighbor_links:
         link['secundary'] = True
       
+    # Add level=1 to neighboring nodes
+    for neighbor in neighbors:
+        neighbor['level'] = 1
     return jsonify({"nodes": nodes + neighbors, "links": links + neighbor_links})
 
 

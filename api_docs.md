@@ -18,19 +18,25 @@
 
 ### 2. GET `/nodes/<string:node_id>` or `/nodes/root`
 
-- **Description**: Retrieves a node by its ID or the root node, along with its neighbors and connected links.
-- **Response**: 
-  - **Status Code**: `200 OK`
-  - **Example**:
-    ```json
-    {
-      "nodes": [
-        {"id": "123abc", "name": "Node1", "content": "Markdown content"},
-        {"id": "456def", "name": "Node2", "content": null}
-      ],
-      "links": [
-        {"source": "123abc", "target": "456def", "secundary": true},
-        {"source": "456def", "target": "123abc", "secundary": false}
-      ]
-    }
-    ```
+Retrieves a node's details and its linked network.
+
+- **Response Keys**:
+  - `nodes`: Array of node details.
+  - `links`: Array of connections between nodes.
+
+**Note**: `links.source` and `links.target` refer to node `id`s in `nodes`.
+
+```json
+{
+  "nodes": [
+    {"id": "123abc", "name": "Node1"},
+    {"id": "456def", "name": "Node2"}
+  ],
+  "links": [
+    {"source": "123abc", "target": "456def"},
+    {"source": "456def", "target": "123abc"}
+  ]
+}
+```
+
+Use `links.source` and `links.target` to map connections to `nodes.id`.

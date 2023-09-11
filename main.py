@@ -4,6 +4,7 @@ import sqlite3
 import os
 import zipfile
 import re
+import json
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
@@ -42,7 +43,6 @@ def get_nodes():
     return jsonify({"warning": "All node names are empty", "nodes": nodes})
   return jsonify(nodes)
 
-
 @app.route("/nodes/<string:node_id>", methods=['GET'])
 def get_node_with_neighbors(node_id):
     nodes = query_db("SELECT * FROM nodes WHERE id=?", (node_id, ))
@@ -57,7 +57,6 @@ def get_node_with_neighbors(node_id):
     if os.path.exists(md_file_path):
         with open(md_file_path, 'r') as md_file:
             md_content = md_file.read()
-            # md_content = markdown.markdown(md_content)  # Convert to HTML if needed
 
     # Add md content to the main node if it exists
     if nodes:
@@ -66,8 +65,8 @@ def get_node_with_neighbors(node_id):
     
     neighbor_ids = set()
     for link in links:
-      neighbor_ids.add(link['source'])
-      neighbor_ids.add(link['target'])
+        neighbor_ids.add(link['source'])
+        neighbor_ids.add(link['target'])
     neighbor_ids.discard(node_id)
     
     # Query for neighbor nodes
@@ -75,21 +74,25 @@ def get_node_with_neighbors(node_id):
         f"SELECT * FROM nodes WHERE id IN ({','.join(['?' for _ in neighbor_ids])})",
         tuple(neighbor_ids))
     
-    # Query for links between neighboring nodes
-    neighbor_links = query_db(
-        f"SELECT * FROM links WHERE (source IN ({','.join(['?' for _ in neighbor_ids])}) AND target IN ({','.join(['?' for _ in neighbor_ids])}))",
-        tuple(neighbor_ids) * 2)
-  
-    # Add secondary=true to new links
-    for link in neighbor_links:
-        link['secundary'] = True
+    # Prepare birth and death as objects, and JSON decode places
+    # FIXME Change DB, this confusing birth*, death* may still remain on the nodes
+    for node in nodes + neighbors:
+        node['birth'] = {}
+        if 'birthdate' in node:
+            node['birth']['date'] = node.pop('birthdate')
+        if 'birthplace' in node:
+            node['birth']['place'] = json.loads(node.pop('birthplace'))
+
+        node['death'] = {}
+        if 'deathdate' in node:
+            node['death']['date'] = node.pop('deathdate')
+        if 'deathplace' in node:
+            node['death']['place'] = json.loads(node.pop('deathplace'))
       
-    # Add level=1 to neighboring nodes
-    for neighbor in neighbors:
-        neighbor['level'] = 1
-    return jsonify({"nodes": nodes + neighbors, "links": links + neighbor_links})
-
-
+        if 'places' in node:
+            node['places'] = json.loads(node['places'])
+    
+        return jsonify({"nodes": nodes + neighbors, "links": links})
 
 @app.route("/nodes/root", methods=['GET'])
 def get_root_node():

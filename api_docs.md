@@ -50,7 +50,7 @@ Retrieves a node's details and its linked network.
         }
       },
       "label": "Victorian sculptor furniture maker",
-      "places": [],
+      "places": [], // 
       "typeId": "f710f257-cd80-5fca-83bd-4a90e5427805",
       "wikidataId": "Q62995264",
       "wikilink": "https://en.wikipedia.org/wiki/Sculptor"}

@@ -47,17 +47,28 @@ class KwebAPI {
     window.dispatchEvent(new CustomEvent('listNodes'));
   }
 
-  async fetchNode(id) {
+  async fetchNode(id, callback) {
     const res = await fetch(`${this.apiUrl}/nodes/${id}?API_KEY=${this.apiKey}`);
     const data = await res.json();
-    console.log(data.nodes.map((node) => node.name));
     window.dispatchEvent(new CustomEvent('nodeLoaded', { detail: data }));
+    
+    if (callback) {
+      callback(null, data);
+    }
+    
+    return Promise.resolve(data);
   }
 
-  async listNodes() {
+  async listNodes(callback) {
     const res = await fetch(`${this.apiUrl}/nodes/?API_KEY=${this.apiKey}`);
     const data = await res.json();
     window.dispatchEvent(new CustomEvent('nodesListed', { detail: data }));
+    
+    if (callback) {
+      callback(null, data);
+    }
+    
+    return Promise.resolve(data);
   }
 }
 

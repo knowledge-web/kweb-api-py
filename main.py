@@ -38,17 +38,29 @@ def query_db(query, args=(), one=False):
 
 @app.route("/nodes/", methods=['GET'])
 def get_nodes():
+  api_key = request.headers.get('API_KEY', None) or request.args.get('API_KEY', None)
+  required_api_key = os.environ.get('API_KEY', None)
+
   nodes = query_db("SELECT id, name FROM nodes")
+
+  if api_key != required_api_key:
+    nodes = [node for node in nodes if not node['name'].startswith('Connections 4')]
+
   if all(node.get('name', None) == '' for node in nodes):
     return jsonify({"warning": "All node names are empty", "nodes": nodes})
+  
   return jsonify(nodes)
+
 
 @app.route("/nodes/<string:node_id>", methods=['GET'])
 def get_node_with_neighbors(node_id):
+    api_key = request.headers.get('API_KEY', None) or request.args.get('API_KEY', None)
+    required_api_key = os.environ.get('API_KEY', None)
+  
     nodes = query_db("SELECT * FROM nodes WHERE id=?", (node_id, ))
     links = query_db("SELECT * FROM links WHERE source=? OR target=?",
                      (node_id, node_id))
-    
+  
     # Initialize markdown content
     md_content = None
 
@@ -73,7 +85,10 @@ def get_node_with_neighbors(node_id):
     neighbors = query_db(
         f"SELECT * FROM nodes WHERE id IN ({','.join(['?' for _ in neighbor_ids])})",
         tuple(neighbor_ids))
-    
+
+    if api_key != required_api_key:
+        neighbors = [node for node in neighbors if not node['name'].startswith('Connections 4')]
+  
     # Prepare birth and death as objects, and JSON decode places
     # FIXME Change DB, this confusing birth*, death* may still remain on the nodes
     for node in nodes + neighbors:

@@ -1,6 +1,7 @@
 class KwebAPI {
-  constructor() {
+  constructor(options = {}) {
     this.apiUrl = this.getApiUrl();
+    this.apiKey = this.getApiKey(options.apiKey);
     this.init();
   }
 
@@ -11,6 +12,15 @@ class KwebAPI {
       return urlParam;
     }
     return localStorage.getItem('apiUrl') || 'https://kweb-api-py.gorbiz.repl.co';
+  }
+
+  getApiKey(defaultKey) {
+    const urlApiKey = new URLSearchParams(window.location.search).get('apiKey');
+    if (urlApiKey) {
+      localStorage.setItem('kwebApiKey', urlApiKey);
+      return urlApiKey;
+    }
+    return defaultKey || localStorage.getItem('kwebApiKey') || null;
   }
 
   init() {
@@ -38,13 +48,14 @@ class KwebAPI {
   }
 
   async fetchNode(id) {
-    const res = await fetch(`${this.apiUrl}/nodes/${id}`);
+    const res = await fetch(`${this.apiUrl}/nodes/${id}?API_KEY=${this.apiKey}`);
     const data = await res.json();
+    console.log(data.nodes.map((node) => node.name));
     window.dispatchEvent(new CustomEvent('nodeLoaded', { detail: data }));
   }
 
   async listNodes() {
-    const res = await fetch(`${this.apiUrl}/nodes/`);
+    const res = await fetch(`${this.apiUrl}/nodes/?API_KEY=${this.apiKey}`);
     const data = await res.json();
     window.dispatchEvent(new CustomEvent('nodesListed', { detail: data }));
   }

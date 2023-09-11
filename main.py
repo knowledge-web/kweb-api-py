@@ -6,6 +6,8 @@ import zipfile
 import re
 import json
 
+# FIXME Setting API_KEY header does not seem to work only query param ?API_KEY=... does
+
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
@@ -34,7 +36,6 @@ def query_db(query, args=(), one=False):
         for row in cur.fetchall()
     ]
   return (rv[0] if rv else None) if one else rv
-
 
 @app.route("/nodes/", methods=['GET'])
 def get_nodes():

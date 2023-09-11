@@ -94,21 +94,21 @@ def get_node_with_neighbors(node_id):
     # FIXME Change DB, this confusing birth*, death* may still remain on the nodes
     for node in nodes + neighbors:
         node['birth'] = {}
-        if 'birthdate' in node:
+        if 'birthdate' in node and node['birthdate'] is not None:
             node['birth']['date'] = node.pop('birthdate')
-        if 'birthplace' in node:
+        if 'birthplace' in node and node['birthplace'] is not None:
             node['birth']['place'] = json.loads(node.pop('birthplace'))
 
         node['death'] = {}
-        if 'deathdate' in node:
+        if 'deathdate' in node and node['deathdate'] is not None:
             node['death']['date'] = node.pop('deathdate')
-        if 'deathplace' in node:
+        if 'deathplace' in node and node['deathplace'] is not None:
             node['death']['place'] = json.loads(node.pop('deathplace'))
       
-        if 'places' in node:
+        if 'places' in node and node['places'] is not None:  # Added None check here
             node['places'] = json.loads(node['places'])
     
-        return jsonify({"nodes": nodes + neighbors, "links": links})
+    return jsonify({"nodes": nodes + neighbors, "links": links})
 
 @app.route("/nodes/root", methods=['GET'])
 def get_root_node():
